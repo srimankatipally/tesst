@@ -1,13 +1,19 @@
 {{ define "severity_firing_payload" -}}
 
-{{/* Build the payload array manually */}}
+{{/* Initialize an empty list for all firing alerts */}}
 {{ $payload := coll.Slice }}
 
 {{ range .Alerts }}
   {{ if eq .Status "firing" }}
+    {{ $severity := .Labels.severity }}
+    {{ if not $severity }}
+      {{/* default to minor if missing */}}
+      {{ $severity = "minor" }}
+    {{ end }}
+
     {{ $payload = coll.Append (coll.Dict
         "alertname" .Labels.alertname
-        "severity" .Labels.severity
+        "severity" $severity
         "status" .Status
         "summary" .Annotations.summary
         "description" .Annotations.description
@@ -23,7 +29,7 @@
   {{ end }}
 {{ end }}
 
-{{/* Wrap into final JSON */}}
+{{/* Create the final JSON output */}}
 {{ $data := coll.Dict
     "status" "firing"
     "receiver" .Receiver
