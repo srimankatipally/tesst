@@ -9,7 +9,7 @@
   "timestamp": "{{ now }}",
   "alerts": [
     {{- $first := true -}}
-    {{- range .Alerts.Firing -}}
+    {{- range .Alerts -}}
       {{- if not $first }},{{ end -}}
       {{- $first = false -}}
       {
@@ -25,6 +25,7 @@
         "alertname": "{{ .Labels.alertname }}",
         "grafana_folder": "{{ .Labels.grafana_folder }}",
         "startsAt": "{{ .StartsAt }}",
+        "endsAt": "{{ .EndsAt }}",
         "generatorURL": "{{ .GeneratorURL }}",
         "silenceURL": "{{ .SilenceURL }}"
       }
