@@ -1,42 +1,33 @@
 {{ define "severity_firing_payload" -}}
 
-{{/* Initialize an empty list for all firing alerts */}}
-{{ $payload := coll.Slice }}
+{
+  "status": "firing",
+  "receiver": "{{ .Receiver }}",
+  "orgId": {{ (index .Alerts 0).OrgID }},
+  "payload": [
+    {{- $first := true -}}
+    {{- range .Alerts -}}
+      {{- if eq .Status "firing" -}}
+        {{- if not $first }},{{ end -}}
+        {
+          "alertname": "{{ .Labels.alertname }}",
+          "severity": "{{ with .Labels.severity }}{{ . }}{{ else }}minor{{ end }}",
+          "status": "{{ .Status }}",
+          "summary": "{{ with .Annotations.summary }}{{ . }}{{ else }}{{ end }}",
+          "description": "{{ with .Annotations.description }}{{ . }}{{ else }}{{ end }}",
+          "instance": "{{ with .Labels.instance }}{{ . }}{{ else }}{{ end }}",
+          "job": "{{ with .Labels.job }}{{ . }}{{ else }}{{ end }}",
+          "startsAt": "{{ .StartsAt }}",
+          "endsAt": "{{ .EndsAt }}",
+          "generatorURL": "{{ .GeneratorURL }}",
+          "dashboardURL": "{{ with .DashboardURL }}{{ . }}{{ else }}{{ end }}",
+          "panelURL": "{{ with .PanelURL }}{{ . }}{{ else }}{{ end }}",
+          "runbookURL": "{{ with .Annotations.runbook_url }}{{ . }}{{ else }}{{ end }}"
+        }
+        {{- $first = false -}}
+      {{- end -}}
+    {{- end }}
+  ]
+}
 
-{{ range .Alerts }}
-  {{ if eq .Status "firing" }}
-    {{ $severity := .Labels.severity }}
-    {{ if not $severity }}
-      {{/* default to minor if missing */}}
-      {{ $severity = "minor" }}
-    {{ end }}
-
-    {{ $payload = coll.Append (coll.Dict
-        "alertname" .Labels.alertname
-        "severity" $severity
-        "status" .Status
-        "summary" .Annotations.summary
-        "description" .Annotations.description
-        "instance" .Labels.instance
-        "job" .Labels.job
-        "startsAt" .StartsAt
-        "endsAt" .EndsAt
-        "generatorURL" .GeneratorURL
-        "dashboardURL" .DashboardURL
-        "panelURL" .PanelURL
-        "runbookURL" .Annotations.runbook_url
-    ) $payload }}
-  {{ end }}
-{{ end }}
-
-{{/* Create the final JSON output */}}
-{{ $data := coll.Dict
-    "status" "firing"
-    "receiver" .Receiver
-    "orgId" (index .Alerts 0).OrgID
-    "firingCount" (len $payload)
-    "payload" $payload
-}}
-
-{{ $data | data.ToJSONPretty "  " }}
 {{- end }}
