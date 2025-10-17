@@ -1,35 +1,34 @@
 {{ define "severity_firing_payload" -}}
 
-{{/* Collect only firing alerts */}}
-{{ $firing := (where .Alerts "Status" "==" "firing") }}
-
-{{/* Build an array to hold all alerts */}}
+{{/* Build the payload array manually */}}
 {{ $payload := coll.Slice }}
 
-{{ range $firing }}
-  {{ $payload = coll.Append (coll.Dict
-      "alertname" .Labels.alertname
-      "severity" .Labels.severity
-      "status" .Status
-      "summary" .Annotations.summary
-      "description" .Annotations.description
-      "instance" .Labels.instance
-      "job" .Labels.job
-      "startsAt" .StartsAt
-      "endsAt" .EndsAt
-      "generatorURL" .GeneratorURL
-      "dashboardURL" .DashboardURL
-      "panelURL" .PanelURL
-      "runbookURL" .Annotations.runbook_url
-  ) $payload }}
+{{ range .Alerts }}
+  {{ if eq .Status "firing" }}
+    {{ $payload = coll.Append (coll.Dict
+        "alertname" .Labels.alertname
+        "severity" .Labels.severity
+        "status" .Status
+        "summary" .Annotations.summary
+        "description" .Annotations.description
+        "instance" .Labels.instance
+        "job" .Labels.job
+        "startsAt" .StartsAt
+        "endsAt" .EndsAt
+        "generatorURL" .GeneratorURL
+        "dashboardURL" .DashboardURL
+        "panelURL" .PanelURL
+        "runbookURL" .Annotations.runbook_url
+    ) $payload }}
+  {{ end }}
 {{ end }}
 
-{{/* Wrap everything into a final JSON payload */}}
+{{/* Wrap into final JSON */}}
 {{ $data := coll.Dict
-    "status" .Status
+    "status" "firing"
     "receiver" .Receiver
     "orgId" (index .Alerts 0).OrgID
-    "firingCount" (len $firing)
+    "firingCount" (len $payload)
     "payload" $payload
 }}
 
