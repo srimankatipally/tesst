@@ -1,35 +1,39 @@
 {{ define "webhook.custom.payload" -}}
-{{- $major := coll.Slice -}}
-{{- $minor := coll.Slice -}}
-{{- $critical := coll.Slice -}}
 
-{{- range .Alerts.Firing -}}   # ✅ Only firing alerts here
-  {{- $alert := coll.Dict
-      "agent" "SMH"
-      "agent_location" "SaaS"
-      "agent_time" (time.Now)
-      "class" "SMH"
-      "description" (printf "%s: %s" .Labels.severity .Annotations.summary)
-      "external_id" .Fingerprint
-      "manager" "SMH"
-      "severity" .Labels.severity
-      "title" .Annotations.summary
-      "status" .Status
-  -}}
+{{/* Initialize arrays manually */}}
+{{- $critical := list -}}
+{{- $major := list -}}
+{{- $minor := list -}}
+{{- $resolved := list -}}
 
-  {{- if eq .Labels.severity "Critical" -}}
-      {{- $critical = coll.Append $alert $critical -}}
-  {{- else if eq .Labels.severity "Major" -}}
-      {{- $major = coll.Append $alert $major -}}
-  {{- else if eq .Labels.severity "Minor" -}}
-      {{- $minor = coll.Append $alert $minor -}}
+{{/* --- Loop over FIRING alerts --- */}}
+{{- range .Alerts.Firing -}}
+  {{- if eq .Annotations.description "Critical" -}}
+    {{- $critical = append $critical . -}}
+  {{- else if eq .Annotations.description "Major" -}}
+    {{- $major = append $major . -}}
+  {{- else if eq .Annotations.description "Minor" -}}
+    {{- $minor = append $minor . -}}
   {{- end -}}
 {{- end -}}
 
-{{ coll.Dict
-  "timestamp" (time.Now)
-  "major_alerts" $major
-  "minor_alerts" $minor
-  "critical_alerts" $critical
-  | data.ToJSONPretty " " }}
+{{/* --- Loop over RESOLVED alerts --- */}}
+{{- range .Alerts.Resolved -}}
+  {{- $resolved = append $resolved . -}}
+{{- end -}}
+
+{{/* --- Build final JSON payload --- */}}
+{
+  "receiver": "{{ .Receiver }}",
+  "status": "{{ .Status }}",
+  "state": "{{ if eq .Status "resolved" }}ok{{ else }}alerting{{ end }}",
+  "externalURL": "{{ .ExternalURL }}",
+  "commonLabels": {{ toJson .CommonLabels }},
+  "commonAnnotations": {{ toJson .CommonAnnotations }},
+  "critical_alerts": {{ toJson $critical }},
+  "major_alerts": {{ toJson $major }},
+  "minor_alerts": {{ toJson $minor }},
+  "resolved_alerts": {{ toJson $resolved }},
+  "timestamp": "{{ now }}"
+}
 {{- end }}
