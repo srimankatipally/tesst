@@ -1,30 +1,37 @@
-[
-  {
-    "status": "firing",
-    "annotations": {
-      "summary": "Instance instance1 has been down for more than 5 minutes"
-    },
-    "labels": {
-      "alertname": "InstanceDown",
-      "instance": "instance1"
-    },
-    "startsAt": "2025-10-15T14:51:57.867Z",
-    "endsAt": "2025-10-16T14:56:57.867Z",
-    "fingerprint": "a5331f0d5a9d81d4",
-    "generatorURL": "http://grafana.com/alerting/grafana/cdeqmlhvflz40f/view"
-  },
-  {
-    "status": "resolved",
-    "annotations": {
-      "summary": "CPU usage above 90%"
-    },
-    "labels": {
-      "alertname": "CpuUsage",
-      "instance": "instance1"
-    },
-    "startsAt": "2025-10-16T10:51:57.867Z",
-    "endsAt": "2025-10-16T14:51:57.867Z",
-    "fingerprint": "b77d941310f9d381",
-    "generatorURL": "http://grafana.com/alerting/grafana/oZSMdGj7z/view"
-  }
-]
+{{ define "severity_firing_payload" -}}
+
+{{/* Collect only firing alerts */}}
+{{ $firing := (where .Alerts "Status" "==" "firing") }}
+
+{{/* Build an array to hold all alerts */}}
+{{ $payload := coll.Slice }}
+
+{{ range $firing }}
+  {{ $payload = coll.Append (coll.Dict
+      "alertname" .Labels.alertname
+      "severity" .Labels.severity
+      "status" .Status
+      "summary" .Annotations.summary
+      "description" .Annotations.description
+      "instance" .Labels.instance
+      "job" .Labels.job
+      "startsAt" .StartsAt
+      "endsAt" .EndsAt
+      "generatorURL" .GeneratorURL
+      "dashboardURL" .DashboardURL
+      "panelURL" .PanelURL
+      "runbookURL" .Annotations.runbook_url
+  ) $payload }}
+{{ end }}
+
+{{/* Wrap everything into a final JSON payload */}}
+{{ $data := coll.Dict
+    "status" .Status
+    "receiver" .Receiver
+    "orgId" (index .Alerts 0).OrgID
+    "firingCount" (len $firing)
+    "payload" $payload
+}}
+
+{{ $data | data.ToJSONPretty "  " }}
+{{- end }}
