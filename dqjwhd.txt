@@ -1,28 +1,4 @@
 {{ define "webhook.custom.payload" -}}
-
-{{/* Initialize arrays manually */}}
-{{- $critical := list -}}
-{{- $major := list -}}
-{{- $minor := list -}}
-{{- $resolved := list -}}
-
-{{/* --- Loop over FIRING alerts --- */}}
-{{- range .Alerts.Firing -}}
-  {{- if eq .Annotations.description "Critical" -}}
-    {{- $critical = append $critical . -}}
-  {{- else if eq .Annotations.description "Major" -}}
-    {{- $major = append $major . -}}
-  {{- else if eq .Annotations.description "Minor" -}}
-    {{- $minor = append $minor . -}}
-  {{- end -}}
-{{- end -}}
-
-{{/* --- Loop over RESOLVED alerts --- */}}
-{{- range .Alerts.Resolved -}}
-  {{- $resolved = append $resolved . -}}
-{{- end -}}
-
-{{/* --- Build final JSON payload --- */}}
 {
   "receiver": "{{ .Receiver }}",
   "status": "{{ .Status }}",
@@ -30,10 +6,29 @@
   "externalURL": "{{ .ExternalURL }}",
   "commonLabels": {{ toJson .CommonLabels }},
   "commonAnnotations": {{ toJson .CommonAnnotations }},
-  "critical_alerts": {{ toJson $critical }},
-  "major_alerts": {{ toJson $major }},
-  "minor_alerts": {{ toJson $minor }},
-  "resolved_alerts": {{ toJson $resolved }},
-  "timestamp": "{{ now }}"
+  "timestamp": "{{ now }}",
+  "alerts": [
+    {{- $first := true -}}
+    {{- range .Alerts.Firing -}}
+      {{- if not $first }},{{ end -}}
+      {{- $first = false -}}
+      {
+        "agent": "SMH",
+        "agent_location": "SaaS",
+        "agent_time": "{{ now }}",
+        "class": "SMH",
+        "description": "{{ .Annotations.description }}: {{ .Annotations.summary }}",
+        "external_id": "{{ .Fingerprint }}",
+        "manager": "SMH",
+        "severity": "{{ .Annotations.description }}",
+        "status": "{{ .Status }}",
+        "alertname": "{{ .Labels.alertname }}",
+        "grafana_folder": "{{ .Labels.grafana_folder }}",
+        "startsAt": "{{ .StartsAt }}",
+        "generatorURL": "{{ .GeneratorURL }}",
+        "silenceURL": "{{ .SilenceURL }}"
+      }
+    {{- end -}}
+  ]
 }
 {{- end }}
