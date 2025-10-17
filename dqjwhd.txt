@@ -1,0 +1,35 @@
+{{ define "webhook.custom.payload" -}}
+{{- $major := coll.Slice -}}
+{{- $minor := coll.Slice -}}
+{{- $critical := coll.Slice -}}
+
+{{- range .Alerts.Firing -}}   # ✅ Only firing alerts here
+  {{- $alert := coll.Dict
+      "agent" "SMH"
+      "agent_location" "SaaS"
+      "agent_time" (time.Now)
+      "class" "SMH"
+      "description" (printf "%s: %s" .Labels.severity .Annotations.summary)
+      "external_id" .Fingerprint
+      "manager" "SMH"
+      "severity" .Labels.severity
+      "title" .Annotations.summary
+      "status" .Status
+  -}}
+
+  {{- if eq .Labels.severity "Critical" -}}
+      {{- $critical = coll.Append $alert $critical -}}
+  {{- else if eq .Labels.severity "Major" -}}
+      {{- $major = coll.Append $alert $major -}}
+  {{- else if eq .Labels.severity "Minor" -}}
+      {{- $minor = coll.Append $alert $minor -}}
+  {{- end -}}
+{{- end -}}
+
+{{ coll.Dict
+  "timestamp" (time.Now)
+  "major_alerts" $major
+  "minor_alerts" $minor
+  "critical_alerts" $critical
+  | data.ToJSONPretty " " }}
+{{- end }}
