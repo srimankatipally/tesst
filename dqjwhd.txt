@@ -1,71 +1,30 @@
-{{ define "webhook.custom.payload" -}}
-{{- $critical := coll.Slice -}}
-{{- $major := coll.Slice -}}
-{{- $minor := coll.Slice -}}
-{{- $resolved := coll.Slice -}}
-
-{{/* ---- Loop through firing alerts ---- */}}
-{{- range .Alerts.Firing -}}
-  {{- $alert := coll.Dict
-      "agent" "SMH"
-      "agent_location" "SaaS"
-      "agent_time" (time.Now)
-      "class" "SMH"
-      "description" (printf "%s: %s" .Annotations.description .Annotations.summary)
-      "external_id" .Fingerprint
-      "manager" "SMH"
-      "severity" .Annotations.description
-      "status" .Status
-      "alertname" .Labels.alertname
-      "grafana_folder" .Labels.grafana_folder
-      "startsAt" .StartsAt
-      "generatorURL" .GeneratorURL
-      "silenceURL" .SilenceURL
-  -}}
-  {{- if eq .Annotations.description "Critical" -}}
-      {{- $critical = coll.Append $alert $critical -}}
-  {{- else if eq .Annotations.description "Major" -}}
-      {{- $major = coll.Append $alert $major -}}
-  {{- else if eq .Annotations.description "Minor" -}}
-      {{- $minor = coll.Append $alert $minor -}}
-  {{- end -}}
-{{- end -}}
-
-{{/* ---- Loop through resolved alerts ---- */}}
-{{- range .Alerts.Resolved -}}
-  {{- $alert := coll.Dict
-      "agent" "SMH"
-      "agent_location" "SaaS"
-      "agent_time" (time.Now)
-      "class" "SMH"
-      "description" (printf "%s: %s" .Annotations.description .Annotations.summary)
-      "external_id" .Fingerprint
-      "manager" "SMH"
-      "severity" .Annotations.description
-      "status" .Status
-      "alertname" .Labels.alertname
-      "grafana_folder" .Labels.grafana_folder
-      "startsAt" .StartsAt
-      "endsAt" .EndsAt
-      "generatorURL" .GeneratorURL
-      "silenceURL" .SilenceURL
-  -}}
-  {{- $resolved = coll.Append $alert $resolved -}}
-{{- end -}}
-
-{{/* ---- Build final JSON payload ---- */}}
-{{ coll.Dict
-  "receiver" .Receiver
-  "status" .Status
-  "state"  (tmpl.Inline "{{ if eq .Status \"resolved\" }}ok{{ else }}alerting{{ end }}" .)
-  "title"  .Title
-  "externalURL" .ExternalURL
-  "commonLabels" .CommonLabels
-  "commonAnnotations" .CommonAnnotations
-  "critical_alerts" $critical
-  "major_alerts" $major
-  "minor_alerts" $minor
-  "resolved_alerts" $resolved
-  "timestamp" (time.Now)
-  | data.ToJSONPretty " " }}
-{{- end }}
+[
+  {
+    "status": "firing",
+    "annotations": {
+      "summary": "Instance instance1 has been down for more than 5 minutes"
+    },
+    "labels": {
+      "alertname": "InstanceDown",
+      "instance": "instance1"
+    },
+    "startsAt": "2025-10-15T14:51:57.867Z",
+    "endsAt": "2025-10-16T14:56:57.867Z",
+    "fingerprint": "a5331f0d5a9d81d4",
+    "generatorURL": "http://grafana.com/alerting/grafana/cdeqmlhvflz40f/view"
+  },
+  {
+    "status": "resolved",
+    "annotations": {
+      "summary": "CPU usage above 90%"
+    },
+    "labels": {
+      "alertname": "CpuUsage",
+      "instance": "instance1"
+    },
+    "startsAt": "2025-10-16T10:51:57.867Z",
+    "endsAt": "2025-10-16T14:51:57.867Z",
+    "fingerprint": "b77d941310f9d381",
+    "generatorURL": "http://grafana.com/alerting/grafana/oZSMdGj7z/view"
+  }
+]
